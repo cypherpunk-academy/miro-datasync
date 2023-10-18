@@ -1,20 +1,20 @@
-import {Miro} from '@mirohq/miro-api';
-import {serialize} from 'cookie';
+import { Miro } from "@mirohq/miro-api";
+import { serialize } from "cookie";
 
 function getSerializedCookie(name: string, value: string) {
   return serialize(name, value, {
-    path: '/',
+    path: "/",
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: "none",
     secure: true,
   });
 }
 
 export default function initMiro(
-  request: {cookies: Record<string, undefined | string>},
-  response?: {setHeader(name: string, value: string[]): void},
+  request: { cookies: Record<string, undefined | string> },
+  response?: { setHeader(name: string, value: string[]): void }
 ) {
-  const tokensCookie = 'miro_tokens';
+  const tokensCookie = "miro_tokens";
 
   // setup a Miro instance that loads tokens from cookies
   return {
@@ -23,7 +23,7 @@ export default function initMiro(
         get: () => {
           // Load state (tokens) from a cookie if it's set
           try {
-            return JSON.parse(request.cookies[tokensCookie] || 'null');
+            return JSON.parse(request.cookies[tokensCookie] || "null");
           } catch (err) {
             return null;
           }
@@ -31,10 +31,10 @@ export default function initMiro(
         set: (_, state) => {
           if (!response)
             throw new Error(
-              'initMiro should be invoked with a response object',
+              "initMiro should be invoked with a response object"
             );
           // store state (tokens) in the cookie
-          response.setHeader('Set-Cookie', [
+          response.setHeader("Set-Cookie", [
             getSerializedCookie(tokensCookie, JSON.stringify(state)),
           ]);
         },

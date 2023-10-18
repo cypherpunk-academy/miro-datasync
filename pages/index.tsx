@@ -1,10 +1,7 @@
 import "dotenv/config";
 import { GetServerSideProps } from "next";
 import { useEffect } from "react";
-import initMiro from "../initMiro";
-import Image from "next/image";
-
-import congratulations from "../src/assets/congratulations.png";
+import initMiro from "../services/initMiro";
 
 export const getServerSideProps: GetServerSideProps =
   async function getServerSideProps({ req }) {
@@ -66,9 +63,6 @@ export default function Main({
 
   return (
     <div className="grid wrapper">
-      <div className="cs1 ce12">
-        <Image src={congratulations} alt="Congratulations text" />
-      </div>
       <div className="cs1 ce12">
         <h1>Congratulations!</h1>
         <p>You've just created your first Miro app!</p>
