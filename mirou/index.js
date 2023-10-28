@@ -376,9 +376,18 @@ class Dpdf {
     }
 
     const sortedParagraphs = paragraphs.sort((a, b) => a.nr - b.nr);
+    let paragraphsText = '';
     for (let i = 1; i < sortedParagraphs.length; i++) {
       const p = sortedParagraphs[i];
       const prevP = sortedParagraphs[i - 1];
+
+      let paragraphText = p.sentences.map(sentence => {
+        let el = document.createElement('div');
+        el.innerHTML = sentence.content;
+        return el.textContent || el.innerText || '';
+      }).join(' ');
+
+      paragraphsText += `Paragraph ${p.nr}:\n${paragraphText}\n\n`;
 
       const firstSentence = p.sentences[0];
       const lastSentence = prevP.sentences[prevP.sentences.length - 1];
@@ -447,7 +456,7 @@ class Dpdf {
 
     await lastSentenceRhombus.sync();
 
-    return sortedParagraphs;
+    return { sortedParagraphs, paragraphsText };
   }
 
   async hideConnectors() {
