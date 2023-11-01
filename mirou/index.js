@@ -225,6 +225,53 @@ class Dpdf {
     );
   }
 
+  async addTrianglePointingToParagraphEnd(p, prevP) {
+    const firstSentence = p.sentences[0];
+    const lastSentence = prevP.sentences[prevP.sentences.length - 1];
+
+    const coords1 = await this.getCoords({
+      ...firstSentence,
+      y: firstSentence.y - firstSentence.height / 2 - 5,
+    });
+
+    const coords2 = await this.getCoords(lastSentence);
+    const rotation = this.calculateRotation(coords1, coords2);
+
+    const triangle = await this.getNextSentence(
+      firstSentence.id,
+      firstSentence.connectorIds,
+      ["triangle"]
+    );
+
+    if (triangle) {
+      setTimeout(() => miro.board.remove(triangle), 5000);
+    }
+
+    const shape = {
+      ...paragraphStart,
+      content: "",
+      x: coords1.x,
+      y: coords1.y,
+      rotation,
+    };
+
+    const newTriangle = await miro.board.createShape(shape);
+
+    miro.board.createConnector({
+      ...endConnector,
+      start: {
+        ...endConnector.start,
+        item: newTriangle.id,
+      },
+      end: {
+        ...endConnector.end,
+        item: firstSentence.id,
+      },
+    });
+
+    console.info(`Added start and end to Paragraph ${p.nr}.`);
+  }
+
   async getNextSentence(
     id,
     connectorIds,
@@ -258,11 +305,58 @@ class Dpdf {
     return null;
   }
 
+  getPlainTextFromHtml(htmlString) {
+    const tempElement = document.createElement("div");
+    tempElement.innerHTML = htmlString;
+    return tempElement.textContent;
+  }
+
+  romanize(num) {
+    if (isNaN(num)) return NaN;
+    var digits = String(+num).split(""),
+      key = [
+        "",
+        "C",
+        "CC",
+        "CCC",
+        "CD",
+        "D",
+        "DC",
+        "DCC",
+        "DCCC",
+        "CM",
+        "",
+        "X",
+        "XX",
+        "XXX",
+        "XL",
+        "L",
+        "LX",
+        "LXX",
+        "LXXX",
+        "XC",
+        "",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+        "VIII",
+        "IX",
+      ],
+      roman = "",
+      i = 3;
+    while (i--) roman = (key[+digits.pop() + i * 10] || "") + roman;
+    return Array(+digits.join("") + 1).join("M") + roman;
+  }
+
   async syncParagraphsOfChapter(num) {
     const chapter = await this.getChapter(num);
 
     if (!chapter) {
-      throw new Error(`I didnot find a chapter  ${num}`);
+      throw new Error(`I did not find a chapter  ${num}`);
     }
 
     const paragraphs = [];
@@ -300,7 +394,7 @@ class Dpdf {
         }
 
         previousSentences.push(circle.id);
-        const paragraphNr = circle.content.match(/\d+/)[0];
+        const paragraphNr = this.getPlainTextFromHtml(circle.content);
         let sentence = circle;
         console.info(`Adding sentences to paragraph ${paragraphNr}.`);
 
@@ -330,7 +424,12 @@ class Dpdf {
             ["rhombus"]
           );
 
-          const heightOffset = lastSentence.type === "sticky_note" ? -15 : 15;
+          const heightOffset =
+            lastSentence.type === "sticky_note"
+              ? -15
+              : ["left_arrow", "right_arrow"].includes(lastSentence.shape)
+              ? -20
+              : 15;
 
           const coords = await this.getCoords(lastSentence);
           const shape = {
@@ -375,55 +474,29 @@ class Dpdf {
       }
     }
 
+    let paragraphInPlainText = `${this.romanize(
+      num
+    )}. ${this.getPlainTextFromHtml(chapter.content).replace(
+      /[0-9-]/g,
+      ""
+    )}\n\n`;
+
     const sortedParagraphs = paragraphs.sort((a, b) => a.nr - b.nr);
-    for (let i = 1; i < sortedParagraphs.length; i++) {
+    for (let i = 0; i < sortedParagraphs.length; i++) {
       const p = sortedParagraphs[i];
       const prevP = sortedParagraphs[i - 1];
 
-      const firstSentence = p.sentences[0];
-      const lastSentence = prevP.sentences[prevP.sentences.length - 1];
-
-      const coords1 = await this.getCoords({
-        ...firstSentence,
-        y: firstSentence.y - firstSentence.height / 2 - 5,
-      });
-
-      const coords2 = await this.getCoords(lastSentence);
-      const rotation = this.calculateRotation(coords1, coords2);
-
-      const triangle = await this.getNextSentence(
-        firstSentence.id,
-        firstSentence.connectorIds,
-        ["triangle"]
-      );
-
-      if (triangle) {
-        setTimeout(() => miro.board.remove(triangle), 5000);
+      if (i > 0) {
+        await this.addTrianglePointingToParagraphEnd(p, prevP);
       }
 
-      const shape = {
-        ...paragraphStart,
-        content: "",
-        x: coords1.x,
-        y: coords1.y,
-        rotation,
-      };
-
-      const newTriangle = await miro.board.createShape(shape);
-
-      miro.board.createConnector({
-        ...endConnector,
-        start: {
-          ...endConnector.start,
-          item: newTriangle.id,
-        },
-        end: {
-          ...endConnector.end,
-          item: firstSentence.id,
-        },
-      });
-
-      console.info(`Added start and end to Paragraph ${p.nr}.`);
+      const text = this.getPlainTextFromHtml(
+        p.sentences.map((s) => s.content).join(" ")
+      )
+        .replace(";", "; ")
+        .replace(/([,:;.-])\s*-/g, "$1 ")
+        .replace(/\s\s/g, " ");
+      paragraphInPlainText += `${p.nr}\n${text}\n`;
     }
 
     const lastParagraphOfChapter =
@@ -447,7 +520,7 @@ class Dpdf {
 
     await lastSentenceRhombus.sync();
 
-    return sortedParagraphs;
+    return { sortedParagraphs, paragraphInPlainText };
   }
 
   async hideConnectors() {

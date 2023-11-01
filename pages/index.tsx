@@ -2,6 +2,7 @@ import "dotenv/config";
 import { GetServerSideProps } from "next";
 import { useEffect } from "react";
 import initMiro from "../services/initMiro";
+import apiCall from "../services/apiCall";
 
 export const getServerSideProps: GetServerSideProps =
   async function getServerSideProps({ req }) {
@@ -31,6 +32,24 @@ export const getServerSideProps: GetServerSideProps =
       },
     };
   };
+
+const createImageWithSdk = async () => {
+  await window.miro.board.createImage({
+    title: "This is an image",
+    url: "https://mloxw9ne171q.i.optimole.com/cb:7qoA.3ae47/w:500/h:349/q:mauto/dpr:2.0/f:best/https://www.resolution.de/wp-content/uploads/2023/01/Out_Of_Office_Overview_Benefits_1.png",
+    x: 0,
+    y: 0,
+    width: 800,
+    rotation: 3,
+  });
+};
+
+const getImageWithLink = async () => {
+  console.log(11.21);
+  const item = await apiCall("get", "/api/restRequest");
+
+  console.log(11.22, { item });
+};
 
 export default function Main({
   boards,
@@ -76,17 +95,17 @@ export default function Main({
 
         <p>
           To explore more and build your own app, see the Miro Developer
-          Platform documentation.
+          Platform do cumentation.
         </p>
       </div>
+      getImageWithLink
       <div className="cs1 ce12">
-        <a
-          className="button button-primary"
-          target="_blank"
-          href="https://developers.miro.com"
-        >
-          Read the documentation
-        </a>
+        <button className="button button-primary" onClick={createImageWithSdk}>
+          Create an image
+        </button>
+        <button className="button button-primary" onClick={getImageWithLink}>
+          Load url of image
+        </button>
       </div>
     </div>
   );
