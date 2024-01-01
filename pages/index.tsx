@@ -1,8 +1,16 @@
 import "dotenv/config";
+import { useEffect, useState } from "react";
+import OpenAI from "openai";
 import { GetServerSideProps } from "next";
-import { useEffect } from "react";
 import initMiro from "../services/initMiro";
 import apiCall from "../services/apiCall";
+
+const openai = new OpenAI();
+
+interface Props {
+  assistant: OpenAI.Beta.Assistants.Assistant;
+  authUrl?: string;
+}
 
 export const getServerSideProps: GetServerSideProps =
   async function getServerSideProps({ req }) {
@@ -18,46 +26,35 @@ export const getServerSideProps: GetServerSideProps =
       };
     }
 
-    const api = miro.as("");
-
-    const boards: string[] = [];
-
-    for await (const board of api.getAllBoards()) {
-      boards.push(board.name || "");
-    }
+    const assistant = await openai.beta.assistants.create({
+      name: "Math Tutor",
+      instructions:
+        "You are a personal math tutor. Write and run code to answer math questions.",
+      tools: [{ type: "code_interpreter" }],
+      model: "gpt-4-1106-preview",
+    });
 
     return {
       props: {
-        boards,
+        assistant,
       },
     };
   };
 
-const createImageWithSdk = async () => {
-  await window.miro.board.createImage({
-    title: "This is an image",
-    url: "https://mloxw9ne171q.i.optimole.com/cb:7qoA.3ae47/w:500/h:349/q:mauto/dpr:2.0/f:best/https://www.resolution.de/wp-content/uploads/2023/01/Out_Of_Office_Overview_Benefits_1.png",
-    x: 0,
-    y: 0,
-    width: 800,
-    rotation: 3,
-  });
+const updateDatabase = async () => {
+  const boardInfo = await window.miro.board.getInfo();
+  const params = new URLSearchParams({ boardId: boardInfo.id });
+  const items = await apiCall(
+    "get",
+    `/api/updateDatabase?${params.toString()}`
+  );
+
+  console.log(11.32, { items });
 };
 
-const getImageWithLink = async () => {
-  console.log(11.21);
-  const item = await apiCall("get", "/api/restRequest");
-
-  console.log(11.22, { item });
-};
-
-export default function Main({
-  boards,
-  authUrl,
-}: {
-  boards: string[];
-  authUrl?: string;
-}) {
+export default function Main({ authUrl, assistant }: Props) {
+  const [message, setMessage] =
+    useState<OpenAI.Beta.Threads.Messages.ThreadMessage>();
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("panel")) return;
 
@@ -66,7 +63,22 @@ export default function Main({
         url: `/?panel=1`,
       });
     });
+
+    // const thread = await openai.beta.threads.create();
+
+    // openai.beta.threads.messages
+    //   .create(thread.id, {
+    //     role: "user",
+    //     content:
+    //       "I need to solve the equation `3x + 11 = 14`. Can you help me?",
+    //   })
+    //   .then((message) => {
+    //     console.log(11.2, { message });
+    //     setMessage(message);
+    //   });
   }, []);
+
+  console.log(11.1, { assistant });
 
   if (authUrl) {
     return (
@@ -83,29 +95,8 @@ export default function Main({
   return (
     <div className="grid wrapper">
       <div className="cs1 ce12">
-        <h1>Congratulations!</h1>
-        <p>You've just created your first Miro app!</p>
-        <p>This is a list of all the boards that your user has access to:</p>
-
-        <ul>
-          {boards.map((board, idx) => (
-            <li key={idx}>{board}</li>
-          ))}
-        </ul>
-
-        <p>
-          To explore more and build your own app, see the Miro Developer
-          Platform do cumentation.
-        </p>
-      </div>
-      getImageWithLink
-      <div className="cs1 ce12">
-        <button className="button button-primary" onClick={createImageWithSdk}>
-          Create an image
-        </button>
-        <button className="button button-primary" onClick={getImageWithLink}>
-          Load url of image
-        </button>
+        <h1>AI Assistant</h1>
+        <div>123</div>
       </div>
     </div>
   );

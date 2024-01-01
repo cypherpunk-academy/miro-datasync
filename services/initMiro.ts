@@ -1,5 +1,16 @@
 import { Miro } from "@mirohq/miro-api";
 import { serialize } from "cookie";
+import mongoose from "mongoose";
+
+// setup database
+mongoose
+  .connect(process.env.MONGODB_URI as string)
+  .then(() => {
+    console.log(12.13, "connected to database");
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
 function getSerializedCookie(name: string, value: string) {
   return serialize(name, value, {

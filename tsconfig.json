@@ -20,6 +20,6 @@
     "incremental": true,
     "isolatedModules": true
   },
-  "include": ["src", "pages", "*.ts", "services/initMiro.ts"],
+  "include": ["src", "pages", "*.ts", "services/initMiro.ts", "models/item.ts"],
   "exclude": ["node_modules", "*.txt"]
 }
